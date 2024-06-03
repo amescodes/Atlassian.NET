@@ -37,16 +37,16 @@ namespace Atlassian.Jira.Remote
         /// <param name="url">The url to the JIRA server.</param>
         /// <param name="authenticator">The authenticator used by RestSharp.</param>
         /// <param name="settings">The settings to configure the rest client.</param>
-        protected JiraRestClient(string url, IAuthenticator authenticator, JiraRestClientSettings settings = null)
+        protected JiraRestClient(string url, IAuthenticator authenticator,  JiraRestClientSettings settings = null)
         {
             url = url.EndsWith("/") ? url : url += "/";
             _clientSettings = settings ?? new JiraRestClientSettings();
-            _restClient = new RestClient(url)
+            _restClient = new RestClient(new RestClientOptions(url)
             {
-                Proxy = _clientSettings.Proxy
-            };
-
-            this._restClient.Authenticator = authenticator;
+                CookieContainer = _clientSettings.CookieContainer,
+                Proxy = _clientSettings.Proxy,
+                Authenticator = authenticator,
+            });
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Atlassian.Jira.Remote
         {
             get
             {
-                return _restClient.BaseUrl.ToString();
+                return _restClient.Options.BaseUrl.ToString();
             }
         }
 
@@ -96,7 +96,7 @@ namespace Atlassian.Jira.Remote
         /// </summary>
         public async Task<JToken> ExecuteRequestAsync(Method method, string resource, object requestBody = null, CancellationToken token = default(CancellationToken))
         {
-            if (method == Method.GET && requestBody != null)
+            if (method == Method.Get && requestBody != null)
             {
                 throw new InvalidOperationException($"GET requests are not allowed to have a request body. Resource: {resource}. Body: {requestBody}");
             }
@@ -112,7 +112,7 @@ namespace Atlassian.Jira.Remote
             }
             else if (requestBody != null)
             {
-                request.JsonSerializer = new RestSharpJsonSerializer(JsonSerializer.Create(Settings.JsonSerializerSettings));
+                //request.JsonSerializer = new RestSharpJsonSerializer(JsonSerializer.Create(Settings.JsonSerializerSettings));
                 request.AddJsonBody(requestBody);
             }
 
@@ -124,7 +124,7 @@ namespace Atlassian.Jira.Remote
         /// <summary>
         /// Executes a request with logging and validation.
         /// </summary>
-        public async Task<IRestResponse> ExecuteRequestAsync(IRestRequest request, CancellationToken token = default(CancellationToken))
+        public async Task<RestResponse> ExecuteRequestAsync(RestRequest request, CancellationToken token = default(CancellationToken))
         {
             LogRequest(request);
             var response = await ExecuteRawResquestAsync(request, token).ConfigureAwait(false);
@@ -135,7 +135,7 @@ namespace Atlassian.Jira.Remote
         /// <summary>
         /// Executes a raw request.
         /// </summary>
-        protected virtual Task<IRestResponse> ExecuteRawResquestAsync(IRestRequest request, CancellationToken token)
+        protected virtual Task<RestResponse> ExecuteRawResquestAsync(RestRequest request, CancellationToken token)
         {
             return _restClient.ExecuteAsync(request, token);
         }
@@ -146,7 +146,7 @@ namespace Atlassian.Jira.Remote
         /// <param name="url">Url to the file location.</param>
         public byte[] DownloadData(string url)
         {
-            return _restClient.DownloadData(new RestRequest(url, Method.GET));
+            return _restClient.DownloadData(new RestRequest(url, Method.Get));
         }
 
         /// <summary>
@@ -156,10 +156,10 @@ namespace Atlassian.Jira.Remote
         /// <param name="fullFileName">Full file name where the file will be downloaded.</param>
         public void Download(string url, string fullFileName)
         {
-            File.WriteAllBytes(fullFileName, _restClient.DownloadData(new RestRequest(url, Method.GET)));
+            File.WriteAllBytes(fullFileName, _restClient.DownloadData(new RestRequest(url, Method.Get)));
         }
 
-        private void LogRequest(IRestRequest request, object body = null)
+        private void LogRequest(RestRequest request, object body = null)
         {
             if (this._clientSettings.EnableRequestTrace)
             {
@@ -180,7 +180,7 @@ namespace Atlassian.Jira.Remote
             }
         }
 
-        private JToken GetValidJsonFromResponse(IRestRequest request, IRestResponse response)
+        private JToken GetValidJsonFromResponse(RestRequest request, RestResponse response)
         {
             var content = response.Content != null ? response.Content.Trim() : string.Empty;
 

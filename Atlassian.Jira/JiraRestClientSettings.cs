@@ -38,6 +38,8 @@ namespace Atlassian.Jira
         /// </summary>
         public JiraCache Cache { get; set; } = new JiraCache();
 
+        public CookieContainer CookieContainer { get; set; } = null;
+
         /// <summary>
         /// The json global serializer settings to use.
         /// </summary>

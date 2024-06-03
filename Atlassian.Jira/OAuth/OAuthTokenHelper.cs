@@ -29,10 +29,10 @@ namespace Atlassian.Jira.OAuth
 
             authenticator.SignatureMethod = oAuthRequestTokenSettings.SignatureMethod.ToOAuthSignatureMethod();
 
-            var restClient = new RestClient(oAuthRequestTokenSettings.Url)
+            var restClient = new RestClient(new RestClientOptions(oAuthRequestTokenSettings.Url)
             {
                 Authenticator = authenticator
-            };
+            });
 
             return GenerateRequestTokenAsync(
                 restClient,
@@ -67,7 +67,7 @@ namespace Atlassian.Jira.OAuth
             var requestTokenQuery = HttpUtility.ParseQueryString(requestTokenResponse.Content.Trim());
 
             var oauthToken = requestTokenQuery["oauth_token"];
-            var authorizeUri = $"{restClient.BaseUrl}/{authorizeTokenUrl}?oauth_token={oauthToken}";
+            var authorizeUri = $"{restClient.Options.BaseUrl}/{authorizeTokenUrl}?oauth_token={oauthToken}";
 
             return new OAuthRequestToken(
                 authorizeUri,
@@ -127,10 +127,10 @@ namespace Atlassian.Jira.OAuth
                 oAuthAccessTokenSettings.OAuthVerifier);
             authenticator.SignatureMethod = oAuthAccessTokenSettings.SignatureMethod.ToOAuthSignatureMethod();
 
-            var restClient = new RestClient(oAuthAccessTokenSettings.Url)
+            var restClient = new RestClient(new RestClientOptions(oAuthAccessTokenSettings.Url)
             {
                 Authenticator = authenticator
-            };
+            });
 
             return ObtainOAuthAccessTokenAsync(
                 restClient,
@@ -155,7 +155,7 @@ namespace Atlassian.Jira.OAuth
             CancellationToken cancellationToken)
         {
             var accessTokenResponse = await restClient.ExecutePostAsync(
-                new RestRequest(accessTokenUrl, Method.POST),
+                new RestRequest(accessTokenUrl, Method.Post),
                 cancellationToken).ConfigureAwait(false);
 
             if (accessTokenResponse.StatusCode != HttpStatusCode.OK)
